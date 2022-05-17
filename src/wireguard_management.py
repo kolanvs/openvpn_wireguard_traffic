@@ -25,7 +25,7 @@ class WireguardStats(object):
 
 		for line in dump_data:
 			user_stat: dict[str, any] = {}
-			also_connecting = True
+			already_connected = True
 			if not user_section:  # pass first string
 				user_section = True
 				continue
@@ -35,15 +35,15 @@ class WireguardStats(object):
 			list_words.popleft()  # pass private key
 			endpoint_ip = list_words.popleft()
 			if endpoint_ip.startswith('none'):  # never connecting
-				also_connecting = False
+				already_connected = False
 
-			if also_connecting:
+			if already_connected:
 				user_stat['endpoint_ip'] = endpoint_ip.split(':')[0]
 			int_ips = list_words.popleft().split(',')
 			user_stat['allowed_ip_v4'] = int_ips[0].split('/')[0]
 			user_stat['allowed_ip_v6'] = int_ips[1].split('/')[0]
 
-			if not also_connecting:
+			if not already_connected:
 				user_stat['endpoint_ip'] = None
 				user_stat['latest_handshake'] = None
 				user_stat['data_recv'] = 0
@@ -57,6 +57,3 @@ class WireguardStats(object):
 			all_users_stat[user_stat['peer_name']] = user_stat
 
 		return all_users_stat
-
-
-
