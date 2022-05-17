@@ -40,8 +40,8 @@ class WireguardStats(object):
 			if already_connected:
 				user_stat['endpoint_ip'] = endpoint_ip.split(':')[0]
 			int_ips = list_words.popleft().split(',')
-			user_stat['allowed_ip_v4'] = int_ips[0].split('/')[0]
-			user_stat['allowed_ip_v6'] = int_ips[1].split('/')[0]
+			user_stat['allowed_ip4'] = int_ips[0].split('/')[0]
+			user_stat['allowed_ip6'] = int_ips[1].split('/')[0]
 
 			if not already_connected:
 				user_stat['endpoint_ip'] = None
