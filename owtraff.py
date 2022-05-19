@@ -10,6 +10,7 @@ def main(**kwargs):
 	print(cfg.vpns)
 	wgconf = WireguardStats()
 	db = DB()
+	db.write_wireguard_stats(wgconf)
 
 
 if __name__ == '__main__':

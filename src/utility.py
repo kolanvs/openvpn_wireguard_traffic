@@ -3,6 +3,7 @@ import sys
 
 from datetime import datetime
 
+
 def output(s):
     global wsgi, wsgi_output
     if not wsgi:
@@ -51,3 +52,13 @@ def get_args():
                         required=False, default='./openvpn-monitor.conf',
                         help='Path to config file openvpn-monitor.conf')
     return parser.parse_args()
+
+
+def flatten(data):
+    if isinstance(data, tuple):
+        if len(data) == 0:
+            return ()
+        else:
+            return flatten(data[0]) + flatten(data[1:])
+    else:
+        return (data,)
