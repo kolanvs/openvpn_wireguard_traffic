@@ -4,7 +4,7 @@ from collections import OrderedDict
 from src.utility import warning, info, is_truthy
 
 
-class ConfigLoader(object):
+class OpenvpnConfigLoader(object):
 
     def __init__(self, config_file):
         self.settings = {}

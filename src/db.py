@@ -2,39 +2,37 @@ import sqlite3
 import sys
 import time
 from itertools import chain
-from src.wireguard_management import WireguardStats
+from src.wireguard_stats import WireguardStats
 from src.utility import flatten
 
 
 class DB(object):
-    def __init__(self):
-        print("Here1")
-        self.dbname = "sqlite3.db"
-        try:
-            conn = sqlite3.connect(self.dbname)
-        except sqlite3.Error:
-            sys.exit(1)
+	def __init__(self):
+		self.dbname = "sqlite3.db"
+		try:
+			conn = sqlite3.connect(self.dbname)
+		except sqlite3.Error:
+			sys.exit(1)
 
-        print("Here2")
+		self.curs = conn.cursor()
+		self.conn = conn
 
-        self.curs = conn.cursor()
-        self.conn = conn
+		if self.check_need_bootstrap_wireguard():
+			self.bootstrap_db_wireguard()
 
-        if self.check_need_bootstrap():
-            print("Need bootstrap!")
-            self.bootstrap_db()
+		if self.check_need_bootstrap_openvpn():
+			self.bootstrap_db_openvpn()
 
-    def bootstrap_db(self):
-        create_peers_table = """
-							create table peers
+	def bootstrap_db_wireguard(self):
+		create_wg_peers_table = """
+							create table wg_peers
 							(
 								id		integer primary key,
 								name	text not null
 							)
 							"""
-
-        create_stats_table = """
-								create table stats
+		create_wg_stats_table = """
+								create table wg_stats
 								(
 								id				integer primary key,
 								peer_id			integer,
@@ -43,67 +41,84 @@ class DB(object):
 								data_sent		integer
 								)
 								"""
+		self.curs.execute(create_wg_peers_table)
+		self.curs.execute(create_wg_stats_table)
 
-        print("Bootstrapping!")
+	def bootstrap_db_openvpn(self):
+		create_ovpn_clients_table = """
+							create table ovpn_clients
+							(
+								id		integer primary key,
+								name	text not null
+							)
+							"""
+		create_ovpn_stats_table = """
+								create table ovpn_stats
+								(
+								id				integer primary key,
+								peer_id			integer,
+								timestamp		integer,
+								data_recv		integer,
+								data_sent		integer
+								)
+								"""
+		self.curs.execute(create_ovpn_clients_table)
+		self.curs.execute(create_ovpn_stats_table)
 
-        self.curs.execute(create_peers_table)
-        self.curs.execute(create_stats_table)
-
-    def check_need_bootstrap(self):
-        check_peers = """
+	def check_need_bootstrap_wireguard(self):
+		check_wg_peers = """
 						select * from sqlite_master
-						where tbl_name = 'peers'
+						where tbl_name = 'wg_peers'
+						"""
+		check_wg_stats = """
+						select * from sqlite_master
+						where tbl_name = 'wg_stats'
+						"""
+		return (len(self.curs.execute(check_wg_peers).fetchall()) == 0) or (
+				len(self.curs.execute(check_wg_stats).fetchall()) == 0
+		)
+
+	def check_need_bootstrap_openvpn(self):
+		check_ovpn_clients = """
+						select * from sqlite_master
+						where tbl_name = 'ovpn_clients'
 						"""
 
-        check_stats = """
-						select * from sqlite_master
-						where tbl_name = 'stats'
-						"""
+		check_ovpn_stats = """
+                        select * from sqlite_master
+                        where tbl_name = 'ovpn_stats'
+                        """
 
-        print("Check bootstrap")
-        return (len(self.curs.execute(check_peers).fetchall()) == 0) or (
-            len(self.curs.execute(check_stats).fetchall()) == 0
-        )
+		return (len(self.curs.execute(check_ovpn_clients).fetchall()) == 0) or (
+				len(self.curs.execute(check_ovpn_stats).fetchall()) == 0
+		)
 
-    def write_wireguard_stats(self, wg_stats: WireguardStats):
-        peer_names_conf = wg_stats.pconf.keys()
-        print(peer_names_conf)
-        peer_names_db = list(
-            chain(*self.curs.execute("select name from peers").fetchall())
-        )
-        print(peer_names_db)
-        for peer_name in peer_names_conf:
-            print(peer_name)
-            if peer_name not in peer_names_db:
-                self.curs.execute(
-                    "insert into peers (name) values ('{0}')".format(peer_name)
-                )
-                self.conn.commit()
-        peers = {
-            k[1]: k[0]
-            for k in self.curs.execute("select id, name from peers").fetchall()
-        }
+	def write_wireguard_wg_stats(self, wg_stats: WireguardStats):
+		wg_peer_names_conf = wg_stats.pconf.keys()
+		wg_peer_names_db = list(
+			chain(*self.curs.execute("select name from wg_peers").fetchall())
+		)
+		for wg_peer_name in wg_peer_names_conf:
+			if wg_peer_name not in wg_peer_names_db:
+				self.curs.execute(
+					"insert into wg_peers (name) values ('{0}')".format(wg_peer_name)
+				)
+				self.conn.commit()
+		wg_peers = {
+			k[1]: k[0]
+			for k in self.curs.execute("select id, name from wg_peers").fetchall()
+		}
 
-        for peer_name in peer_names_conf:
-            peer_stat = wg_stats.pconf[peer_name]
-            print(peer_stat)
-            print(
-                "insert into stats (peer_id, timestamp, data_recv, data_sent)"
-                "values ('{0}, {1}, {2}, {3}')".format(
-                    peers[peer_name],
-                    int(time.time()),
-                    peer_stat["data_recv"],
-                    peer_stat["data_sent"],
-                )
-            )
-            self.curs.execute(
-                "insert into stats (peer_id, timestamp, data_recv, data_sent)"
-                "values ({0}, {1}, {2}, {3})".format(
-                    peers[peer_name],
-                    int(time.time()),
-                    peer_stat["data_recv"],
-                    peer_stat["data_sent"],
-                )
-            )
+		for wg_peer_name in wg_peer_names_conf:
+			wg_peer_stat = wg_stats.pconf[wg_peer_name]
+			self.curs.execute(
+				"insert into wg_stats (peer_id, timestamp, data_recv, data_sent)"
+				"values ({0}, {1}, {2}, {3})".format(
+					wg_peers[wg_peer_name],
+					int(time.time()),
+					wg_peer_stat["data_recv"],
+					wg_peer_stat["data_sent"],
+				)
+			)
 
-        self.conn.commit()
+		self.conn.commit()

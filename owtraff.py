@@ -1,16 +1,17 @@
-from src.config_loader import ConfigLoader
+from src.config_loader import OpenvpnConfigLoader
 from src.utility import get_args
-from src.wireguard_management import WireguardStats
+from src.wireguard_stats import WireguardStats
+from src.openvpn_stats import OpenvpnStats
 from src.db import DB
 
 
 def main(**kwargs):
-	cfg = ConfigLoader(args.config)
-	print(cfg.settings)
-	print(cfg.vpns)
-	wgconf = WireguardStats()
+	ovpn_cfg = OpenvpnConfigLoader(args.config)
+	wg_stats = WireguardStats()
+	ovpn_stats = OpenvpnStats(ovpn_cfg)
+	print(ovpn_stats.vpns)
 	db = DB()
-	db.write_wireguard_stats(wgconf)
+	db.write_wireguard_stats(wg_stats)
 
 
 if __name__ == '__main__':

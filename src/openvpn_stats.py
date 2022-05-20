@@ -9,11 +9,10 @@ from ipaddress import ip_address
 from collections import deque
 
 
-class OpenvpnMgmtInterface(object):
+class OpenvpnStats(object):
 
     def __init__(self, cfg, **kwargs):
         self.vpns = cfg.vpns
-        print(kwargs)
 
         for _, vpn in list(self.vpns.items()):
             self._socket_connect(vpn)
@@ -23,17 +22,13 @@ class OpenvpnMgmtInterface(object):
 
     def collect_data(self, vpn):
         ver = self.send_command('version\n')
-        print(ver)
         vpn['release'] = self.parse_version(ver)
         vpn['version'] = semver(vpn['release'].split(' ')[1])
         state = self.send_command('state\n')
-        print(state)
         vpn['state'] = self.parse_state(state)
         stats = self.send_command('load-stats\n')
-        print(stats)
         vpn['stats'] = self.parse_stats(stats)
         status = self.send_command('status 3\n')
-        print(status)
         vpn['sessions'] = self.parse_status(status, vpn['version'])
 
     def _socket_send(self, command):
@@ -64,7 +59,6 @@ class OpenvpnMgmtInterface(object):
                 if password:
                     self.wait_for_data(password=password)
                 vpn['socket_connected'] = True
-                print('Connected!')
         except socket.timeout as e:
             vpn['error'] = '{0!s}'.format(e)
             warning('socket timeout: {0!s}'.format(e))

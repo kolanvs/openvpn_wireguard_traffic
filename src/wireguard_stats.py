@@ -8,7 +8,6 @@ class WireguardStats(object):
 		self.pconf = {}
 		dump_data = self.get_dump_data()
 		self.pconf = self.parse_wg_dump(dump_data)
-		print(self.pconf)
 
 	@staticmethod
 	def get_dump_data() -> list[str]:
@@ -21,7 +20,6 @@ class WireguardStats(object):
 		all_users_stat: dict[str, any] = {}
 		user_section = False
 
-		print(dump_data)
 
 		for line in dump_data:
 			user_stat: dict[str, any] = {}
